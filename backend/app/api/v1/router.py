@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.v1.endpoints import auth, users, articles, topics, feed, search, favorites, seed
+from app.api.v1.endpoints import auth, users, articles, topics, feed, search, favorites, seed, enrich
 
 api_router = APIRouter()
 
@@ -11,4 +11,6 @@ api_router.include_router(feed.router, prefix="/feed", tags=["feed"])
 api_router.include_router(search.router, prefix="/search", tags=["search"])
 api_router.include_router(favorites.router, prefix="/user/favorites", tags=["favorites"])
 api_router.include_router(seed.router, prefix="/seed", tags=["seed"])
+api_router.include_router(enrich.router, prefix="/enrich", tags=["enrich"])
+
 
