@@ -30,9 +30,16 @@ class UserResponse(UserBase):
     id: str
     preferences: UserPreferencesBase
     
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
 
 class Token(BaseModel):
     access_token: str
     token_type: str
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+class LoginRequestEmail(BaseModel):
+    email: EmailStr
+    password: str
