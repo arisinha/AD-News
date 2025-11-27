@@ -24,30 +24,10 @@ async def create_favorite(
     favorite_in: FavoriteCreate,
     current_user: User = Depends(get_current_user),
 ) -> Any:
-    # Create favorite with user_id
-    # Note: In a real app, we should check if it already exists
-    fav_data = favorite_in.model_dump()
-    fav_data["user_id"] = current_user.id
-    
-    # We need to adapt the CRUD create to handle this or create a specific method
-    # For simplicity, let's assume we can pass the dict with user_id
-    # But our CRUD expects Pydantic model.
-    # Let's do it manually here or update CRUD.
-    # Updating CRUD is better but for now let's hack it slightly by creating a new model instance
-    
-    # Actually, let's just use the CRUD create but we need to inject user_id.
-    # The schema FavoriteCreate doesn't have user_id.
-    # We can create a new dict and pass it to the model directly if we bypass CRUD or update CRUD.
-    
-    # Let's use the collection directly for this specific case to be quick, or better:
-    # Create a Favorite internal model
-    from app.models.favorite import Favorite
-    
-    fav = Favorite(**fav_data)
-    collection = db["favorites"]
-    result = await collection.insert_one(fav.model_dump(by_alias=True))
-    created_doc = await collection.find_one({"_id": result.inserted_id})
-    return Favorite(**created_doc)
+    """
+    Create new favorite.
+    """
+    return await favorite_crud.create(db, obj_in=favorite_in, user_id=str(current_user.id))
 
 @router.delete("/{favorite_id}", response_model=FavoriteResponse)
 async def delete_favorite(

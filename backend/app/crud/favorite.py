@@ -11,4 +11,12 @@ class CRUDFavorite(CRUDBase[Favorite, FavoriteCreate, FavoriteBase]):
         docs = await cursor.to_list(length=limit)
         return [Favorite(**doc) for doc in docs]
 
+    async def create(self, db, *, obj_in: FavoriteCreate, user_id: str) -> Favorite:
+        obj_in_data = obj_in.model_dump()
+        obj_in_data["user_id"] = ObjectId(user_id)
+        collection = db[self.collection_name]
+        result = await collection.insert_one(obj_in_data)
+        created_doc = await collection.find_one({"_id": result.inserted_id})
+        return Favorite(**created_doc)
+
 favorite = CRUDFavorite(Favorite, "favorites")
