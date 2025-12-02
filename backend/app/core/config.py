@@ -3,7 +3,7 @@ from typing import Optional
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "AD News API"
-    API_V1_STR: str = "/v1"
+    API_V1_STR: str = "/api/v1"
     SECRET_KEY: str = "changethis"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     

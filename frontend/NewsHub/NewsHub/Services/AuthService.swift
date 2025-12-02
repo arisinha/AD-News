@@ -51,7 +51,7 @@ class AuthService {
     
     func fetchCurrentUser() async throws {
         let user: User = try await networkManager.request(
-            endpoint: "/users/me",
+            endpoint: "/user/me",
             method: "GET",
             requiresAuth: true
         )

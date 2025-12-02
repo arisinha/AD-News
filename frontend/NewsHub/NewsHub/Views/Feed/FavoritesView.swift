@@ -69,7 +69,7 @@ struct FavoritesView: View {
         
         do {
             let response: FavoritesResponse = try await NetworkManager.shared.request(
-                endpoint: "/favorites/",
+                endpoint: "/user/favorites/",
                 method: "GET"
             )
             favorites = response.items
