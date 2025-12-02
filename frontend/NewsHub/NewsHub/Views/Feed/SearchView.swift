@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct SearchPlaceholderView: View {
+struct SearchView: View {
     @State private var searchText = ""
     @State private var searchResults: [Article] = []
     @State private var isSearching = false

@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct FavoritesPlaceholderView: View {
+struct FavoritesView: View {
     @State private var favorites: [Article] = []
     @State private var isLoading = false
     @State private var errorMessage: String?

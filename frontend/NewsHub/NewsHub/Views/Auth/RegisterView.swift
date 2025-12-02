@@ -49,16 +49,48 @@ struct RegisterView: View {
                     
                     // Formulario
                     VStack(spacing: 15) {
-                        CustomTextField(title: "Email", text: $email, placeholder: "tu@email.com")
-                            .keyboardType(.emailAddress)
-                            .textInputAutocapitalization(.never)
+                        // Email
+                        VStack(alignment: .leading, spacing: 5) {
+                            Text("Email")
+                                .foregroundColor(.white.opacity(0.9))
+                                .font(.subheadline)
+                            
+                            TextField("tu@email.com", text: $email)
+                                .textFieldStyle(RoundedTextFieldStyle())
+                                .keyboardType(.emailAddress)
+                                .textInputAutocapitalization(.never)
+                        }
                         
-                        CustomTextField(title: "Nombre de Usuario", text: $username, placeholder: "tu_usuario")
-                            .textInputAutocapitalization(.never)
+                        // Username
+                        VStack(alignment: .leading, spacing: 5) {
+                            Text("Nombre de Usuario")
+                                .foregroundColor(.white.opacity(0.9))
+                                .font(.subheadline)
+                            
+                            TextField("tu_usuario", text: $username)
+                                .textFieldStyle(RoundedTextFieldStyle())
+                                .textInputAutocapitalization(.never)
+                        }
                         
-                        CustomSecureField(title: "Contraseña", text: $password, placeholder: "••••••••")
+                        // Password
+                        VStack(alignment: .leading, spacing: 5) {
+                            Text("Contraseña")
+                                .foregroundColor(.white.opacity(0.9))
+                                .font(.subheadline)
+                            
+                            SecureField("••••••••", text: $password)
+                                .textFieldStyle(RoundedTextFieldStyle())
+                        }
                         
-                        CustomSecureField(title: "Confirmar Contraseña", text: $confirmPassword, placeholder: "••••••••")
+                        // Confirm Password
+                        VStack(alignment: .leading, spacing: 5) {
+                            Text("Confirmar Contraseña")
+                                .foregroundColor(.white.opacity(0.9))
+                                .font(.subheadline)
+                            
+                            SecureField("••••••••", text: $confirmPassword)
+                                .textFieldStyle(RoundedTextFieldStyle())
+                        }
                         
                         // Error messages
                         if showError || viewModel.errorMessage != nil {
@@ -138,39 +170,5 @@ struct RoundedTextFieldStyle: TextFieldStyle {
             .padding()
             .background(Color.white)
             .cornerRadius(10)
-    }
-}
-
-struct CustomTextField: View {
-    let title: String
-    @Binding var text: String
-    let placeholder: String
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            Text(title)
-                .foregroundColor(.white.opacity(0.9))
-                .font(.subheadline)
-            
-            TextField(placeholder, text: $text)
-                .textFieldStyle(RoundedTextFieldStyle())
-        }
-    }
-}
-
-struct CustomSecureField: View {
-    let title: String
-    @Binding var text: String
-    let placeholder: String
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            Text(title)
-                .foregroundColor(.white.opacity(0.9))
-                .font(.subheadline)
-            
-            SecureField(placeholder, text: $text)
-                .textFieldStyle(RoundedTextFieldStyle())
-        }
     }
 }

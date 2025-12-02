@@ -15,7 +15,7 @@ class ArticleViewModel: ObservableObject {
         errorMessage = nil
         
         do {
-            article = try await articleService.getArticle(id: id)
+            article = try await articleService.getArticleById(id)
         } catch {
             errorMessage = "Error al cargar el artículo: \(error.localizedDescription)"
         }

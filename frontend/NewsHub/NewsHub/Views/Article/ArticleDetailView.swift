@@ -138,6 +138,7 @@ struct ArticleDetailView: View {
             }
             .padding()
         }
+        #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
@@ -155,7 +156,9 @@ struct ArticleDetailView: View {
                             .foregroundColor(isFavorite ? .red : .primary)
                     }
                 }
+            }
         }
+        #endif
     }
     
     private func formatDate(_ dateString: String) -> String {
