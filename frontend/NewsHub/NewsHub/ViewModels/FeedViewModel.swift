@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import Combine
 
 @MainActor
 class FeedViewModel: ObservableObject {
@@ -12,16 +13,27 @@ class FeedViewModel: ObservableObject {
     
     let categories = ["Todos", "Tecnología", "Ciencia", "Economía", "Deportes", "Entretenimiento"]
     
-    func loadArticles() async {
+    enum FeedType {
+        case personalized
+        case trending
+        case category(String)
+    }
+    
+    func loadFeed(filter: FeedType = .personalized) async {
         isLoading = true
         errorMessage = nil
         
         do {
-            if selectedCategory == "Todos" {
-                articles = try await feedService.getFeed()
-            } else {
-                articles = try await feedService.getFeedByCategory(category: selectedCategory)
+            let response: FeedResponse
+            switch filter {
+            case .personalized:
+                response = try await feedService.getPersonalizedFeed()
+            case .trending:
+                response = try await feedService.getTrendingArticles()
+            case .category(let category):
+                response = try await feedService.getArticlesByCategory(category: category)
             }
+            articles = response.items
         } catch {
             errorMessage = "Error al cargar noticias: \(error.localizedDescription)"
         }
@@ -32,7 +44,7 @@ class FeedViewModel: ObservableObject {
     func selectCategory(_ category: String) {
         selectedCategory = category
         Task {
-            await loadArticles()
+            await loadFeed(filter: .category(category))
         }
     }
     

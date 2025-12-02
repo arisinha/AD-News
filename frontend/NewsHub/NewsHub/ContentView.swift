@@ -1,9 +1,5 @@
-//
-//  ContentView.swift
-//  NewsHub
-//
-//  Created by Carlos Eduardo Rios Cazares on 25/11/25.
-//
+import SwiftUI
+import Combine
 
 struct ContentView: View {
     @EnvironmentObject var authViewModel: AuthViewModel

@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import Combine
 
 @MainActor
 class AuthViewModel: ObservableObject {
@@ -16,6 +17,9 @@ class AuthViewModel: ObservableObject {
     
     func checkAuthStatus() {
         isAuthenticated = authService.isAuthenticated()
+        if isAuthenticated {
+            currentUser = authService.getCurrentUser()
+        }
     }
     
     func login(email: String, password: String) async {
@@ -24,6 +28,7 @@ class AuthViewModel: ObservableObject {
         
         do {
             _ = try await authService.login(email: email, password: password)
+            currentUser = authService.getCurrentUser()
             isAuthenticated = true
         } catch {
             errorMessage = error.localizedDescription

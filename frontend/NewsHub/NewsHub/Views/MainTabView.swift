@@ -1,3 +1,6 @@
+import SwiftUI
+import Combine
+
 struct MainTabView: View {
     @State private var selectedTab = 0
     
@@ -9,13 +12,13 @@ struct MainTabView: View {
                 }
                 .tag(0)
             
-            SearchPlaceholderView()
+            SearchView()
                 .tabItem {
                     Label("Buscar", systemImage: "magnifyingglass")
                 }
                 .tag(1)
             
-            FavoritesPlaceholderView()
+            FavoritesView()
                 .tabItem {
                     Label("Guardados", systemImage: "bookmark.fill")
                 }
