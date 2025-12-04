@@ -11,7 +11,20 @@ class FeedViewModel: ObservableObject {
     
     private let feedService = FeedService.shared
     
-    let categories = ["Todos", "Tecnología", "Ciencia", "Economía", "Deportes", "Entretenimiento"]
+    // Display names for UI
+    let categories = ["Todos", "Tecnología", "Ciencia", "Negocios", "Deportes", "Entretenimiento", "Salud", "Educación"]
+    
+    // Mapping from Spanish display names to English API values
+    private let categoryMapping: [String: String] = [
+        "Todos": "all",
+        "Tecnología": "technology",
+        "Ciencia": "science",
+        "Negocios": "business",
+        "Deportes": "sports",
+        "Entretenimiento": "entertainment",
+        "Salud": "health",
+        "Educación": "education"
+    ]
     
     enum FeedType {
         case personalized
@@ -31,7 +44,9 @@ class FeedViewModel: ObservableObject {
             case .trending:
                 response = try await feedService.getTrendingArticles()
             case .category(let category):
-                response = try await feedService.getArticlesByCategory(category: category)
+                // Map Spanish category name to English API value
+                let apiCategory = categoryMapping[category] ?? category.lowercased()
+                response = try await feedService.getArticlesByCategory(category: apiCategory)
             }
             articles = response.items
         } catch {

@@ -16,7 +16,7 @@ class FeedService {
     
     func getPersonalizedFeed(page: Int = 1, size: Int = 20) async throws -> FeedResponse {
         return try await networkManager.request(
-            endpoint: "/articles/?limit=10&skip=0",
+            endpoint: "/articles/?limit=50&skip=0",
             method: "GET"
         )
     }
@@ -29,6 +29,14 @@ class FeedService {
     }
     
     func getArticlesByCategory(category: String, page: Int = 1, size: Int = 20) async throws -> FeedResponse {
+        // If "all" is selected, return all articles
+        if category == "all" {
+            return try await networkManager.request(
+                endpoint: "/articles/?limit=\(size)&skip=\((page - 1) * size)",
+                method: "GET"
+            )
+        }
+        
         return try await networkManager.request(
             endpoint: "/feed/category/\(category)?page=\(page)&size=\(size)",
             method: "GET"

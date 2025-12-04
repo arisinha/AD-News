@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct RegisterView: View {
-    @StateObject private var viewModel = AuthViewModel()
+    @EnvironmentObject var viewModel: AuthViewModel
     @Environment(\.dismiss) private var dismiss
     
     @State private var email = ""
@@ -49,6 +49,7 @@ struct RegisterView: View {
                             TextField("tu_usuario", text: $username)
                                 .textFieldStyle(RoundedTextFieldStyle())
                                 .textInputAutocapitalization(.never)
+                                .autocorrectionDisabled(true)
                         }
                         
                         // Password

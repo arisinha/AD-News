@@ -2,11 +2,11 @@ import SwiftUI
 
 struct FeedView: View {
     @StateObject private var viewModel = FeedViewModel()
-    @State private var selectedFilter: FeedFilter = .personalized
+    @State private var selectedFilter: FeedFilter = .trending
     
     enum FeedFilter: String, CaseIterable {
-        case personalized = "Para Ti"
         case trending = "Tendencias"
+        case categories = "Categorías"
     }
     
     var body: some View {
@@ -20,6 +20,24 @@ struct FeedView: View {
                 }
                 .pickerStyle(.segmented)
                 .padding()
+                
+                // Category chips (only show when Categories tab is selected)
+                if selectedFilter == .categories {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 10) {
+                            ForEach(viewModel.categories, id: \.self) { category in
+                                CategoryChipView(
+                                    title: category,
+                                    isSelected: viewModel.selectedCategory == category
+                                ) {
+                                    viewModel.selectCategory(category)
+                                }
+                            }
+                        }
+                        .padding(.horizontal)
+                    }
+                    .padding(.bottom, 8)
+                }
                 
                 // Articles List
                 if viewModel.isLoading && viewModel.articles.isEmpty {
@@ -37,7 +55,7 @@ struct FeedView: View {
                             .foregroundColor(.secondary)
                         Button("Reintentar") {
                             Task {
-                                await viewModel.loadFeed(filter: selectedFilter == .personalized ? .personalized : .trending)
+                                await loadCurrentFeed()
                             }
                         }
                         .buttonStyle(.bordered)
@@ -67,7 +85,7 @@ struct FeedView: View {
                         .padding()
                     }
                     .refreshable {
-                        await viewModel.loadFeed(filter: selectedFilter == .personalized ? .personalized : .trending)
+                        await loadCurrentFeed()
                     }
                 }
             }
@@ -75,12 +93,44 @@ struct FeedView: View {
             .navigationBarTitleDisplayMode(.large)
         }
         .task {
-            await viewModel.loadFeed(filter: .personalized)
+            await viewModel.loadFeed(filter: .trending)
         }
         .onChange(of: selectedFilter) { _, newValue in
             Task {
-                await viewModel.loadFeed(filter: newValue == .personalized ? .personalized : .trending)
+                if newValue == .trending {
+                    await viewModel.loadFeed(filter: .trending)
+                } else {
+                    await viewModel.loadFeed(filter: .category(viewModel.selectedCategory))
+                }
             }
+        }
+    }
+    
+    private func loadCurrentFeed() async {
+        if selectedFilter == .trending {
+            await viewModel.loadFeed(filter: .trending)
+        } else {
+            await viewModel.loadFeed(filter: .category(viewModel.selectedCategory))
+        }
+    }
+}
+
+// Category chip component
+struct CategoryChipView: View {
+    let title: String
+    let isSelected: Bool
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            Text(title)
+                .font(.subheadline)
+                .fontWeight(isSelected ? .semibold : .regular)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(isSelected ? Color.blue : Color.gray.opacity(0.15))
+                .foregroundColor(isSelected ? .white : .primary)
+                .cornerRadius(20)
         }
     }
 }
@@ -150,14 +200,7 @@ struct ArticleCardView: View {
             
             // Metadata
             HStack {
-                // Sentiment indicator
-                HStack(spacing: 4) {
-                    Image(systemName: sentimentIcon)
-                        .foregroundColor(sentimentColor)
-                    Text(article.sentimentLabel)
-                        .font(.caption)
-                        .foregroundColor(sentimentColor)
-                }
+
                 
                 Spacer()
                 
@@ -173,21 +216,7 @@ struct ArticleCardView: View {
         .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
     }
     
-    private var sentimentIcon: String {
-        switch article.sentimentLabel.lowercased() {
-        case "positive": return "arrow.up.circle.fill"
-        case "negative": return "arrow.down.circle.fill"
-        default: return "minus.circle.fill"
-        }
-    }
-    
-    private var sentimentColor: Color {
-        switch article.sentimentLabel.lowercased() {
-        case "positive": return .green
-        case "negative": return .red
-        default: return .gray
-        }
-    }
+
     
     private func formatDate(_ dateString: String) -> String {
         let formatter = ISO8601DateFormatter()
