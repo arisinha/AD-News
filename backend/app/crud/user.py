@@ -9,6 +9,8 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
         collection = db[self.collection_name]
         doc = await collection.find_one({"email": email})
         if doc:
+            if '_id' in doc:
+                doc['_id'] = str(doc['_id'])
             return User(**doc)
         return None
 
@@ -26,12 +28,16 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
         collection = db[self.collection_name]
         result = await collection.insert_one(obj_in_data)
         created_doc = await collection.find_one({"_id": result.inserted_id})
+        if created_doc and '_id' in created_doc:
+            created_doc['_id'] = str(created_doc['_id'])
         return User(**created_doc)
 
     async def get_by_username(self, db, *, username: str) -> Optional[User]:
         collection = db[self.collection_name]
         doc = await collection.find_one({"username": username})
         if doc:
+            if '_id' in doc:
+                doc['_id'] = str(doc['_id'])
             return User(**doc)
         return None
 

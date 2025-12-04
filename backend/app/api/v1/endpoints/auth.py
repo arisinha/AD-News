@@ -11,23 +11,6 @@ from app.db.mongodb import get_database
 router = APIRouter()
 
 @router.post("/login", response_model=Token)
-async def login_access_token(
-    db=Depends(get_database), form_data: OAuth2PasswordRequestForm = Depends()
-) -> Any:
-    user = await user_crud.authenticate(
-        db, email=form_data.username, password=form_data.password
-    )
-    if not user:
-        raise HTTPException(status_code=400, detail="Incorrect email or password")
-    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    return {
-        "access_token": create_access_token(
-            user.id, expires_delta=access_token_expires
-        ),
-        "token_type": "bearer",
-    }
-
-@router.post("/login/json", response_model=Token)
 async def login_json(
     login_data: LoginRequest,
     db=Depends(get_database)
@@ -45,6 +28,7 @@ async def login_json(
         ),
         "token_type": "bearer",
     }
+
 
 
 @router.post("/register", response_model=UserResponse)

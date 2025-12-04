@@ -13,38 +13,15 @@ struct RegisterView: View {
     
     var body: some View {
         ZStack {
-            // Fondo degradado
-            LinearGradient(
-                colors: [Color.blue, Color.purple],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
-            
             ScrollView {
                 VStack(spacing: 20) {
-                    // Logo
-                    ZStack {
-                        Circle()
-                            .fill(Color.white.opacity(0.2))
-                            .frame(width: 100, height: 100)
-                        
-                        Circle()
-                            .fill(Color.blue)
-                            .frame(width: 80, height: 80)
-                        
-                        Text("N")
-                            .font(.system(size: 40, weight: .bold))
-                            .foregroundColor(.white)
-                    }
-                    .padding(.top, 50)
-                    
+                    Spacer()
                     Text("Crear Cuenta")
                         .font(.system(size: 32, weight: .bold))
-                        .foregroundColor(.white)
+                        .foregroundColor(.black)
                     
-                    Text("Únete a NewsHub")
-                        .foregroundColor(.white.opacity(0.9))
+                    Text("Únete a AD News")
+                        .foregroundColor(.black.opacity(0.9))
                         .padding(.bottom, 20)
                     
                     // Formulario
@@ -52,19 +29,21 @@ struct RegisterView: View {
                         // Email
                         VStack(alignment: .leading, spacing: 5) {
                             Text("Email")
-                                .foregroundColor(.white.opacity(0.9))
+                                .foregroundColor(.black.opacity(0.9))
                                 .font(.subheadline)
                             
                             TextField("tu@email.com", text: $email)
                                 .textFieldStyle(RoundedTextFieldStyle())
                                 .keyboardType(.emailAddress)
+                                .foregroundColor(.black)
                                 .textInputAutocapitalization(.never)
+                                .autocorrectionDisabled(true)
                         }
                         
                         // Username
                         VStack(alignment: .leading, spacing: 5) {
                             Text("Nombre de Usuario")
-                                .foregroundColor(.white.opacity(0.9))
+                                .foregroundColor(.black.opacity(0.9))
                                 .font(.subheadline)
                             
                             TextField("tu_usuario", text: $username)
@@ -75,7 +54,7 @@ struct RegisterView: View {
                         // Password
                         VStack(alignment: .leading, spacing: 5) {
                             Text("Contraseña")
-                                .foregroundColor(.white.opacity(0.9))
+                                .foregroundColor(.black.opacity(0.9))
                                 .font(.subheadline)
                             
                             SecureField("••••••••", text: $password)
@@ -85,7 +64,7 @@ struct RegisterView: View {
                         // Confirm Password
                         VStack(alignment: .leading, spacing: 5) {
                             Text("Confirmar Contraseña")
-                                .foregroundColor(.white.opacity(0.9))
+                                .foregroundColor(.black.opacity(0.9))
                                 .font(.subheadline)
                             
                             SecureField("••••••••", text: $confirmPassword)
@@ -108,18 +87,18 @@ struct RegisterView: View {
                             } else {
                                 Text("Crear Cuenta")
                                     .font(.headline)
-                                    .foregroundColor(.blue)
+                                    .foregroundColor(.white)
                             }
                         }
                         .frame(maxWidth: .infinity)
                         .frame(height: 50)
-                        .background(Color.white)
+                        .background(Color.blue)
                         .cornerRadius(12)
                         .disabled(viewModel.isLoading)
                         
                         Button(action: { dismiss() }) {
                             Text("¿Ya tienes cuenta? Inicia sesión")
-                                .foregroundColor(.white)
+                                .foregroundColor(.black)
                                 .underline()
                         }
                         .padding(.top, 10)
@@ -133,7 +112,7 @@ struct RegisterView: View {
             ToolbarItem(placement: .navigationBarLeading) {
                 Button(action: { dismiss() }) {
                     Image(systemName: "chevron.left")
-                        .foregroundColor(.white)
+                        .foregroundColor(.black)
                 }
             }
         }
@@ -168,7 +147,8 @@ struct RoundedTextFieldStyle: TextFieldStyle {
     func _body(configuration: TextField<Self._Label>) -> some View {
         configuration
             .padding()
-            .background(Color.white)
+            .background(Color(.systemGray6))
             .cornerRadius(10)
+            .foregroundColor(.black)
     }
 }

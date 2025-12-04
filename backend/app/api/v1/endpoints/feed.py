@@ -3,12 +3,12 @@ from fastapi import APIRouter, Depends
 from app.api.v1.dependencies import get_current_user
 from app.models.user import User
 from app.crud.article import article as article_crud
-from app.schemas.article import ArticleResponse
+from app.schemas.article import ArticleResponse, FeedResponse
 from app.db.mongodb import get_database
 
 router = APIRouter()
 
-@router.get("/personalized", response_model=List[ArticleResponse])
+@router.get("/personalized", response_model=FeedResponse)
 async def read_personalized_feed(
     db=Depends(get_database),
     current_user: User = Depends(get_current_user),
@@ -21,14 +21,20 @@ async def read_personalized_feed(
     
     # Logic to personalize feed based on user preferences
     # For now, just return latest articles
-    # In real app: filter by categories, regions, etc.
     
-    # Example: if user likes "technology", fetch tech news
-    # categories = current_user.preferences.categories
+    total = await db["articles"].count_documents({})
+    pages = (total + size - 1) // size
+    items = await article_crud.get_multi(db, skip=skip, limit=limit)
     
-    return await article_crud.get_multi(db, skip=skip, limit=limit)
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "size": size,
+        "pages": pages
+    }
 
-@router.get("/trending", response_model=List[ArticleResponse])
+@router.get("/trending", response_model=FeedResponse)
 async def read_trending_feed(
     db=Depends(get_database),
     page: int = 1,
@@ -39,10 +45,19 @@ async def read_trending_feed(
     limit = size
     
     # For now, return latest articles
-    # In production: sort by engagement metrics, views, shares, etc.
-    return await article_crud.get_multi(db, skip=skip, limit=limit)
+    total = await db["articles"].count_documents({})
+    pages = (total + size - 1) // size
+    items = await article_crud.get_multi(db, skip=skip, limit=limit)
+    
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "size": size,
+        "pages": pages
+    }
 
-@router.get("/", response_model=List[ArticleResponse])
+@router.get("/", response_model=FeedResponse)
 async def read_feed(
     db=Depends(get_database),
     current_user: User = Depends(get_current_user),
@@ -52,9 +67,20 @@ async def read_feed(
     """General feed endpoint"""
     skip = (page - 1) * size
     limit = size
-    return await article_crud.get_multi(db, skip=skip, limit=limit)
+    
+    total = await db["articles"].count_documents({})
+    pages = (total + size - 1) // size
+    items = await article_crud.get_multi(db, skip=skip, limit=limit)
+    
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "size": size,
+        "pages": pages
+    }
 
-@router.get("/category/{category}", response_model=List[ArticleResponse])
+@router.get("/category/{category}", response_model=FeedResponse)
 async def read_feed_by_category(
     category: str,
     db=Depends(get_database),
@@ -64,9 +90,20 @@ async def read_feed_by_category(
 ) -> Any:
     skip = (page - 1) * size
     limit = size
-    return await article_crud.get_by_category(db, category=category, skip=skip, limit=limit)
+    
+    total = await db["articles"].count_documents({"category": category})
+    pages = (total + size - 1) // size
+    items = await article_crud.get_by_category(db, category=category, skip=skip, limit=limit)
+    
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "size": size,
+        "pages": pages
+    }
 
-@router.get("/region/{region}", response_model=List[ArticleResponse])
+@router.get("/region/{region}", response_model=FeedResponse)
 async def read_feed_by_region(
     region: str,
     db=Depends(get_database),
@@ -76,4 +113,15 @@ async def read_feed_by_region(
 ) -> Any:
     skip = (page - 1) * size
     limit = size
-    return await article_crud.get_by_region(db, region=region, skip=skip, limit=limit)
+    
+    total = await db["articles"].count_documents({"region": region})
+    pages = (total + size - 1) // size
+    items = await article_crud.get_by_region(db, region=region, skip=skip, limit=limit)
+    
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "size": size,
+        "pages": pages
+    }

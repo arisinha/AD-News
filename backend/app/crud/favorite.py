@@ -9,6 +9,14 @@ class CRUDFavorite(CRUDBase[Favorite, FavoriteCreate, FavoriteBase]):
         collection = db[self.collection_name]
         cursor = collection.find({"user_id": ObjectId(user_id)}).sort("created_at", -1).skip(skip).limit(limit)
         docs = await cursor.to_list(length=limit)
+        # Convert ObjectId to string for proper serialization
+        for doc in docs:
+            if '_id' in doc:
+                doc['_id'] = str(doc['_id'])
+            if 'user_id' in doc and doc['user_id']:
+                doc['user_id'] = str(doc['user_id'])
+            if 'article_id' in doc and doc['article_id']:
+                doc['article_id'] = str(doc['article_id'])
         return [Favorite(**doc) for doc in docs]
 
     async def create(self, db, *, obj_in: FavoriteCreate, user_id: str) -> Favorite:
@@ -17,6 +25,13 @@ class CRUDFavorite(CRUDBase[Favorite, FavoriteCreate, FavoriteBase]):
         collection = db[self.collection_name]
         result = await collection.insert_one(obj_in_data)
         created_doc = await collection.find_one({"_id": result.inserted_id})
+        # Convert ObjectId to string for proper serialization
+        if created_doc and '_id' in created_doc:
+            created_doc['_id'] = str(created_doc['_id'])
+            if 'user_id' in created_doc and created_doc['user_id']:
+                created_doc['user_id'] = str(created_doc['user_id'])
+            if 'article_id' in created_doc and created_doc['article_id']:
+                created_doc['article_id'] = str(created_doc['article_id'])
         return Favorite(**created_doc)
 
 favorite = CRUDFavorite(Favorite, "favorites")

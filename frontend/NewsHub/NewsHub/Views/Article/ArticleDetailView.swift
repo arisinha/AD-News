@@ -150,7 +150,9 @@ struct ArticleDetailView: View {
                     }
                     
                     Button(action: {
-                        isFavorite.toggle()
+                        Task {
+                            await toggleFavorite()
+                        }
                     }) {
                         Image(systemName: isFavorite ? "heart.fill" : "heart")
                             .foregroundColor(isFavorite ? .red : .primary)
@@ -159,6 +161,9 @@ struct ArticleDetailView: View {
             }
         }
         #endif
+        .task {
+            await checkFavoriteStatus()
+        }
     }
     
     private func formatDate(_ dateString: String) -> String {
@@ -171,5 +176,25 @@ struct ArticleDetailView: View {
         displayFormatter.dateStyle = .long
         displayFormatter.locale = Locale(identifier: "es_ES")
         return displayFormatter.string(from: date)
+    }
+    
+    private func checkFavoriteStatus() async {
+        isFavorite = await FavoriteService.shared.checkIfFavorite(articleId: article.id)
+    }
+    
+    private func toggleFavorite() async {
+        let previousState = isFavorite
+        isFavorite.toggle() // Optimistic update
+        
+        do {
+            if isFavorite {
+                try await FavoriteService.shared.addFavorite(articleId: article.id)
+            } else {
+                try await FavoriteService.shared.removeFavorite(articleId: article.id)
+            }
+        } catch {
+            isFavorite = previousState // Revert on error
+            print("Error toggling favorite: \(error)")
+        }
     }
 }

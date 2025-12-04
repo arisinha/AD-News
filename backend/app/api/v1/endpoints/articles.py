@@ -1,12 +1,12 @@
 from typing import Any, List
 from fastapi import APIRouter, Depends, HTTPException
 from app.crud.article import article as article_crud
-from app.schemas.article import ArticleResponse
+from app.schemas.article import ArticleResponse, FeedResponse
 from app.db.mongodb import get_database
 
 router = APIRouter()
 
-@router.get("/", response_model=List[ArticleResponse])
+@router.get("/", response_model=FeedResponse)
 async def read_articles(
     page: int = 1,
     size: int = 10,
@@ -14,8 +14,12 @@ async def read_articles(
 ) -> Any:
     skip = (page - 1) * size
     limit = size
+    
+    total = await db["articles"].count_documents({})
+    pages = (total + size - 1) // size
     articles = await article_crud.get_multi(db, skip=skip, limit=limit)
-    return [
+    
+    items = [
         ArticleResponse(
             id=str(article.id),
             title=article.title,
@@ -38,8 +42,16 @@ async def read_articles(
         )
         for article in articles
     ]
+    
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "size": size,
+        "pages": pages
+    }
 
-@router.get("/search", response_model=List[ArticleResponse])
+@router.get("/search", response_model=FeedResponse)
 async def search_articles(
     q: str,
     page: int = 1,
@@ -48,8 +60,24 @@ async def search_articles(
 ) -> Any:
     skip = (page - 1) * size
     limit = size
+    
+    # Note: Counting search results is expensive, so we might want to skip it or optimize it.
+    # For now, we'll just return total=0 if we don't want to count, or count matching docs.
+    # Since article_crud.search uses regex, counting is also regex.
+    # Let's do a count for consistency.
+    regex_pattern = {"$regex": q, "$options": "i"}
+    total = await db["articles"].count_documents({
+        "$or": [
+            {"title": regex_pattern},
+            {"description": regex_pattern},
+            {"content": regex_pattern}
+        ]
+    })
+    pages = (total + size - 1) // size
+    
     articles = await article_crud.search(db, query=q, skip=skip, limit=limit)
-    return [
+    
+    items = [
         ArticleResponse(
             id=str(article.id),
             title=article.title,
@@ -72,6 +100,14 @@ async def search_articles(
         )
         for article in articles
     ]
+    
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "size": size,
+        "pages": pages
+    }
 
 
 @router.get("/{article_id}", response_model=ArticleResponse)

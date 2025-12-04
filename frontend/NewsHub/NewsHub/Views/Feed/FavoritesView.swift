@@ -68,10 +68,7 @@ struct FavoritesView: View {
         errorMessage = nil
         
         do {
-            let response: FavoritesResponse = try await NetworkManager.shared.request(
-                endpoint: "/user/favorites/",
-                method: "GET"
-            )
+            let response = try await FavoriteService.shared.getFavorites()
             favorites = response.items
         } catch {
             errorMessage = error.localizedDescription
@@ -81,7 +78,3 @@ struct FavoritesView: View {
     }
 }
 
-struct FavoritesResponse: Codable {
-    let items: [Article]
-    let total: Int
-}

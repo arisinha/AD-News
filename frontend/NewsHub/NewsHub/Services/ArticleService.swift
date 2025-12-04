@@ -16,7 +16,7 @@ class ArticleService {
     
     func getArticles(page: Int = 1, size: Int = 20) async throws -> ArticlesResponse {
         return try await networkManager.request(
-            endpoint: "/articles/?page=\(page)&size=\(size)",
+            endpoint: "/articles?limit=\(page)&size=\(size)",
             method: "GET"
         )
     }

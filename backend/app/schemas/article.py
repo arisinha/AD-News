@@ -32,3 +32,10 @@ class ArticleResponse(ArticleBase):
     
     class Config:
         from_attributes = True
+
+class FeedResponse(BaseModel):
+    items: List[ArticleResponse]
+    total: int
+    page: int
+    size: int
+    pages: int

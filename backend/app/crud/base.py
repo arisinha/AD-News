@@ -17,6 +17,11 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         collection: AsyncIOMotorCollection = db[self.collection_name]
         doc = await collection.find_one({"_id": ObjectId(id)})
         if doc:
+            # Convert ObjectId to string for proper serialization
+            if '_id' in doc:
+                doc['_id'] = str(doc['_id'])
+            if 'topic_id' in doc and doc['topic_id']:
+                doc['topic_id'] = str(doc['topic_id'])
             return self.model(**doc)
         return None
 
@@ -26,6 +31,12 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         collection: AsyncIOMotorCollection = db[self.collection_name]
         cursor = collection.find().skip(skip).limit(limit)
         docs = await cursor.to_list(length=limit)
+        # Convert ObjectId to string for proper serialization
+        for doc in docs:
+            if '_id' in doc:
+                doc['_id'] = str(doc['_id'])
+            if 'topic_id' in doc and doc['topic_id']:
+                doc['topic_id'] = str(doc['topic_id'])
         return [self.model(**doc) for doc in docs]
 
     async def create(self, db, *, obj_in: CreateSchemaType) -> ModelType:
@@ -33,6 +44,11 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         collection: AsyncIOMotorCollection = db[self.collection_name]
         result = await collection.insert_one(obj_in_data)
         created_doc = await collection.find_one({"_id": result.inserted_id})
+        # Convert ObjectId to string for proper serialization
+        if created_doc and '_id' in created_doc:
+            created_doc['_id'] = str(created_doc['_id'])
+            if 'topic_id' in created_doc and created_doc['topic_id']:
+                created_doc['topic_id'] = str(created_doc['topic_id'])
         return self.model(**created_doc)
 
     async def update(
@@ -57,6 +73,11 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             {"_id": db_obj.id}, {"$set": update_data}
         )
         updated_doc = await collection.find_one({"_id": db_obj.id})
+        # Convert ObjectId to string for proper serialization
+        if updated_doc and '_id' in updated_doc:
+            updated_doc['_id'] = str(updated_doc['_id'])
+            if 'topic_id' in updated_doc and updated_doc['topic_id']:
+                updated_doc['topic_id'] = str(updated_doc['topic_id'])
         return self.model(**updated_doc)
 
     async def remove(self, db, *, id: Any) -> Optional[ModelType]:
@@ -64,5 +85,10 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         doc = await collection.find_one({"_id": ObjectId(id)})
         if doc:
             await collection.delete_one({"_id": ObjectId(id)})
+            # Convert ObjectId to string for proper serialization
+            if '_id' in doc:
+                doc['_id'] = str(doc['_id'])
+            if 'topic_id' in doc and doc['topic_id']:
+                doc['topic_id'] = str(doc['topic_id'])
             return self.model(**doc)
         return None

@@ -71,7 +71,7 @@ struct FeedView: View {
                     }
                 }
             }
-            .navigationTitle("NewsHub")
+            .navigationTitle("AD News")
             .navigationBarTitleDisplayMode(.large)
         }
         .task {

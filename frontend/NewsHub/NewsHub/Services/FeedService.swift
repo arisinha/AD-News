@@ -16,7 +16,7 @@ class FeedService {
     
     func getPersonalizedFeed(page: Int = 1, size: Int = 20) async throws -> FeedResponse {
         return try await networkManager.request(
-            endpoint: "/feed/personalized?page=\(page)&size=\(size)",
+            endpoint: "/articles/?limit=10&skip=0",
             method: "GET"
         )
     }

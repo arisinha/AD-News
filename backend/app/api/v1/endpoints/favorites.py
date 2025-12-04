@@ -87,3 +87,25 @@ async def delete_favorite(
         raise HTTPException(status_code=403, detail="Not enough permissions")
     
     return await favorite_crud.remove(db, id=favorite_id)
+
+@router.delete("/article/{article_id}", response_model=FavoriteResponse)
+async def delete_favorite_by_article(
+    article_id: str,
+    db=Depends(get_database),
+    current_user: User = Depends(get_current_user),
+) -> Any:
+    """
+    Delete favorite by article ID.
+    """
+    # Find the favorite record
+    collection = db["favorites"]
+    from bson import ObjectId
+    fav_doc = await collection.find_one({
+        "user_id": ObjectId(current_user.id),
+        "article_id": article_id
+    })
+    
+    if not fav_doc:
+        raise HTTPException(status_code=404, detail="Favorite not found")
+        
+    return await favorite_crud.remove(db, id=fav_doc["_id"])

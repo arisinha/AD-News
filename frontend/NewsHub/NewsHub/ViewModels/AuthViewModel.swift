@@ -22,12 +22,12 @@ class AuthViewModel: ObservableObject {
         }
     }
     
-    func login(email: String, password: String) async {
+    func login(username: String, password: String) async {
         isLoading = true
         errorMessage = nil
         
         do {
-            _ = try await authService.login(email: email, password: password)
+            _ = try await authService.login(username: username, password: password)
             currentUser = authService.getCurrentUser()
             isAuthenticated = true
         } catch {
@@ -49,7 +49,7 @@ class AuthViewModel: ObservableObject {
             )
             
             // Después de registrar, hacer login automático
-            _ = try await authService.login(email: email, password: password)
+            _ = try await authService.login(username: username, password: password)
             
             currentUser = user
             isAuthenticated = true

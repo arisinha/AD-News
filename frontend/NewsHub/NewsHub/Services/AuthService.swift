@@ -6,6 +6,7 @@ class AuthService {
     
     private let tokenKey = "auth_token"
     private let userKey = "current_user"
+ 
     
     private init() {}
     
@@ -13,8 +14,8 @@ class AuthService {
         return UserDefaults.standard.string(forKey: tokenKey) != nil
     }
     
-    func login(email: String, password: String) async throws -> AuthResponse {
-        let loginRequest = LoginRequest(username: email, password: password)
+    func login(username: String, password: String) async throws -> AuthResponse {
+        let loginRequest = LoginRequest(username: username, password: password)
         
         let response: AuthResponse = try await networkManager.request(
             endpoint: "/auth/login",
