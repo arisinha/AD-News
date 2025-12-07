@@ -13,7 +13,7 @@ from app.db.mongodb import get_database
 # Simple in-memory cache
 _cache: dict = {}
 _cache_expiry: dict = {}
-CACHE_TTL_SECONDS = 180  # 3 minutes cache
+CACHE_TTL_SECONDS = 60  # 1 minute cache for faster live detection
 
 
 class YouTubeService:
@@ -47,8 +47,10 @@ class YouTubeService:
     async def search_live_streams(self, channel_id: str) -> Optional[dict]:
         """
         Search for active live streams on a specific channel.
+        Uses multiple detection methods for reliability.
         Returns the first live stream found or None.
         """
+        # Method 1: Direct search with eventType=live
         params = {
             "part": "snippet",
             "channelId": channel_id,
@@ -61,9 +63,31 @@ class YouTubeService:
             data = await self._make_request("search", params)
             if data and data.get("items"):
                 return data["items"][0]
-            return None
         except Exception:
-            return None
+            pass
+        
+        # Method 2: Fallback - Check recent videos for liveBroadcastContent = "live"
+        # This catches streams that eventType=live misses
+        try:
+            fallback_params = {
+                "part": "snippet",
+                "channelId": channel_id,
+                "type": "video",
+                "order": "date",
+                "maxResults": 5  # Check last 5 videos
+            }
+            
+            data = await self._make_request("search", fallback_params)
+            if data and data.get("items"):
+                for item in data["items"]:
+                    snippet = item.get("snippet", {})
+                    # Check if this video is currently live
+                    if snippet.get("liveBroadcastContent") == "live":
+                        return item
+        except Exception:
+            pass
+        
+        return None
     
     async def get_video_details(self, video_id: str) -> Optional[dict]:
         """Get detailed information about a video."""

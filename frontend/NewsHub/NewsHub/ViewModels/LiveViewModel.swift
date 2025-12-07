@@ -41,12 +41,13 @@ class LiveViewModel: ObservableObject {
     // MARK: - Public Methods
     
     /// Loads all live stream statuses from the backend
-    func loadLiveStreams() async {
+    /// - Parameter forceRefresh: If true, bypasses backend cache for fresh data
+    func loadLiveStreams(forceRefresh: Bool = false) async {
         isLoading = true
         errorMessage = nil
         
         do {
-            let response = try await liveService.getLiveStreams()
+            let response = try await liveService.getLiveStreams(forceRefresh: forceRefresh)
             liveStreams = response.channels
             lastUpdated = Date()
         } catch let error as NetworkError {
@@ -58,9 +59,9 @@ class LiveViewModel: ObservableObject {
         isLoading = false
     }
     
-    /// Refreshes the live stream data
+    /// Refreshes the live stream data (forces cache bypass)
     func refresh() async {
-        await loadLiveStreams()
+        await loadLiveStreams(forceRefresh: true)
     }
     
     /// Returns a formatted string for the last update time

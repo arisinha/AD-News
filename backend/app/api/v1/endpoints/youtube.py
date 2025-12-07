@@ -33,16 +33,25 @@ class LiveStreamsListResponse(BaseModel):
 
 
 @router.get("/lives", response_model=LiveStreamsListResponse)
-async def get_youtube_lives():
+async def get_youtube_lives(force_refresh: bool = False):
     """
     Get live stream status for all configured news channels.
     
     Returns a list of channels with their current live streaming status.
     Live channels are sorted first, followed by offline channels.
     
-    Responses are cached for 3 minutes to respect YouTube API quotas.
+    Args:
+        force_refresh: If true, bypasses cache and fetches fresh data from YouTube API.
+    
+    Responses are cached for 1 minute to respect YouTube API quotas.
     """
     try:
+        # Clear cache if force_refresh is requested
+        if force_refresh:
+            from app.services.youtube_service import _cache, _cache_expiry
+            _cache.clear()
+            _cache_expiry.clear()
+        
         live_statuses = await youtube_service.get_all_live_channels()
         
         live_count = sum(1 for channel in live_statuses if channel.get("live", False))

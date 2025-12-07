@@ -8,10 +8,12 @@ class LiveService {
     private init() {}
     
     /// Fetches all YouTube live stream statuses from configured news channels
+    /// - Parameter forceRefresh: If true, bypasses backend cache for fresh data
     /// - Returns: LiveStreamsResponse containing all channels and their live status
-    func getLiveStreams() async throws -> LiveStreamsResponse {
+    func getLiveStreams(forceRefresh: Bool = false) async throws -> LiveStreamsResponse {
+        let endpoint = forceRefresh ? "/youtube/lives?force_refresh=true" : "/youtube/lives"
         return try await networkManager.request(
-            endpoint: "/youtube/lives",
+            endpoint: endpoint,
             method: "GET",
             requiresAuth: false
         )
