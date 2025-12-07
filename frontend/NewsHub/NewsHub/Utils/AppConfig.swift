@@ -3,7 +3,7 @@ import Foundation
 enum AppConfig {
     // MARK: - API Configuration
 
-    static let baseURL = "http://localhost:8000/v1"
+    static let baseURL = "https://ad-news-wdp3.vercel.app/v1"
     
     // MARK: - App Settings
     
