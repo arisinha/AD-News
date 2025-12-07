@@ -1,14 +1,16 @@
 """
 Seed script for YouTube channels collection.
 Contains Spanish-language news channels, primarily from Mexico.
+Now includes YouTube handles for better live detection.
 """
 
-# Spanish-language news channels with their YouTube channel IDs
+# Spanish-language news channels with their YouTube channel IDs and handles
 NEWS_CHANNELS = [
     # Mexican News Channels
     {
         "name": "Milenio",
         "channelId": "UCFxH2jxHQPz2OaA-gvSRIzg",
+        "handle": "@MilenioNoticias",
         "category": "news",
         "language": "es",
         "region": "MX"
@@ -16,6 +18,7 @@ NEWS_CHANNELS = [
     {
         "name": "Imagen Noticias",
         "channelId": "UCq7xKqfSPBTe8rFcEITfS0w",
+        "handle": "@ImagenNoticias",
         "category": "news",
         "language": "es",
         "region": "MX"
@@ -23,6 +26,7 @@ NEWS_CHANNELS = [
     {
         "name": "Televisa Noticias",
         "channelId": "UCHq9DoL9ONG4LCAmXMR1bTg",
+        "handle": "@noticierostelevisa",
         "category": "news",
         "language": "es",
         "region": "MX"
@@ -30,6 +34,7 @@ NEWS_CHANNELS = [
     {
         "name": "N+ Noticias",
         "channelId": "UC8yvDroqvTz0qnKlKPUEXog",
+        "handle": "@naboreanoticias",
         "category": "news",
         "language": "es",
         "region": "MX"
@@ -37,6 +42,7 @@ NEWS_CHANNELS = [
     {
         "name": "Foro TV",
         "channelId": "UCnPLGBjP90UYV4c10xnA_TQ",
+        "handle": "@ForoTV",
         "category": "news",
         "language": "es",
         "region": "MX"
@@ -44,6 +50,7 @@ NEWS_CHANNELS = [
     {
         "name": "ADN 40",
         "channelId": "UCbFiNkmAkh9VWqBjvZ-K2PQ",
+        "handle": "@ADN40",
         "category": "news",
         "language": "es",
         "region": "MX"
@@ -51,6 +58,7 @@ NEWS_CHANNELS = [
     {
         "name": "Excélsior TV",
         "channelId": "UClqo4ZAAZ01HQdCTlovwY6g",
+        "handle": "@ExcelsiorTV",
         "category": "news",
         "language": "es",
         "region": "MX"
@@ -58,6 +66,7 @@ NEWS_CHANNELS = [
     {
         "name": "El Universal",
         "channelId": "UCHhGLdVcVJHMN34vKBa7dNA",
+        "handle": "@elaboreanunivaborean",
         "category": "news",
         "language": "es",
         "region": "MX"
@@ -65,6 +74,7 @@ NEWS_CHANNELS = [
     {
         "name": "TV Azteca Noticias",
         "channelId": "UCxFLeXd7-OrcPD2s00xxRjQ",
+        "handle": "@TVAztecaNoticias",
         "category": "news",
         "language": "es",
         "region": "MX"
@@ -72,6 +82,7 @@ NEWS_CHANNELS = [
     {
         "name": "Once Noticias",
         "channelId": "UChG6tArNrVTMPwfvKIBvlXA",
+        "handle": "@OnceNoticias",
         "category": "news",
         "language": "es",
         "region": "MX"
@@ -80,6 +91,7 @@ NEWS_CHANNELS = [
     {
         "name": "CNN en Español",
         "channelId": "UCK3PcpioUREFnBYLDuh2DxQ",
+        "handle": "@CNNEspanol",
         "category": "news",
         "language": "es",
         "region": "US"
@@ -87,6 +99,7 @@ NEWS_CHANNELS = [
     {
         "name": "Telemundo",
         "channelId": "UCRwA1NTjGOP1RkYoP4wRCmw",
+        "handle": "@Telemundo",
         "category": "news",
         "language": "es",
         "region": "US"
@@ -94,6 +107,7 @@ NEWS_CHANNELS = [
     {
         "name": "NTN24",
         "channelId": "UCBhlvKZfJPexg7BuR5d0tRA",
+        "handle": "@NTN24",
         "category": "news",
         "language": "es",
         "region": "CO"
@@ -101,6 +115,7 @@ NEWS_CHANNELS = [
     {
         "name": "DW Español",
         "channelId": "UCT2VMLy-rU1bgkB1FXkMV5g",
+        "handle": "@DWEspanol",
         "category": "news",
         "language": "es",
         "region": "DE"
@@ -108,6 +123,7 @@ NEWS_CHANNELS = [
     {
         "name": "FRANCE 24 Español",
         "channelId": "UCUdOoVWuWmgo1wByzcsyKDQ",
+        "handle": "@FRANCE24Espanol",
         "category": "news",
         "language": "es",
         "region": "FR"

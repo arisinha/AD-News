@@ -1,9 +1,11 @@
 """
 YouTube Live Streams Service
-Handles communication with YouTube Data API to detect live streams.
+Handles detection of YouTube live streams using web scraping (no quota limits)
+with fallback to YouTube Data API when available.
 """
 
 import asyncio
+import re
 from datetime import datetime, timedelta
 from typing import Optional
 import httpx
@@ -13,101 +15,207 @@ from app.db.mongodb import get_database
 # Simple in-memory cache
 _cache: dict = {}
 _cache_expiry: dict = {}
-CACHE_TTL_SECONDS = 60  # 1 minute cache for faster live detection
+CACHE_TTL_SECONDS = 120  # 2 minutes cache
 
 
 class YouTubeService:
-    """Service for interacting with YouTube Data API to detect live streams."""
+    """Service for detecting YouTube live streams."""
     
     BASE_URL = "https://www.googleapis.com/youtube/v3"
     
     def __init__(self):
         self.api_key = settings.YOUTUBE_API_KEY
-        
-    async def _make_request(self, endpoint: str, params: dict) -> Optional[dict]:
-        """Make a request to YouTube Data API."""
-        if not self.api_key:
-            raise ValueError("YOUTUBE_API_KEY not configured in environment")
-        
-        params["key"] = self.api_key
-        url = f"{self.BASE_URL}/{endpoint}"
-        
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            try:
-                response = await client.get(url, params=params)
-                response.raise_for_status()
-                return response.json()
-            except httpx.HTTPStatusError as e:
-                if e.response.status_code == 403:
-                    raise ValueError("YouTube API quota exceeded or invalid API key")
-                raise
-            except httpx.RequestError as e:
-                raise ConnectionError(f"Failed to connect to YouTube API: {str(e)}")
+        self.headers = {
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept-Language": "es-MX,es;q=0.9,en;q=0.8",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
+        }
     
-    async def search_live_streams(self, channel_id: str) -> Optional[dict]:
+    async def _check_video_is_live(self, client: httpx.AsyncClient, video_id: str) -> bool:
+        """Check if a specific video ID is currently live."""
+        try:
+            video_url = f"https://www.youtube.com/watch?v={video_id}"
+            response = await client.get(video_url, headers=self.headers)
+            content = response.text
+            return (
+                '"isLive":true' in content or 
+                '"isLiveNow":true' in content or
+                '"isLiveContent":true' in content
+            )
+        except Exception:
+            return False
+    
+    async def _scrape_live_by_handle(self, handle: str) -> Optional[dict]:
         """
-        Search for active live streams on a specific channel.
-        Uses multiple detection methods for reliability.
-        Returns the first live stream found or None.
+        Check if a channel is live using its @handle.
+        This works better than channel ID for live detection.
         """
-        # Method 1: Direct search with eventType=live
+        if not handle:
+            return None
+            
+        live_url = f"https://www.youtube.com/{handle}/live"
+        
+        async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
+            try:
+                response = await client.get(live_url, headers=self.headers)
+                final_url = str(response.url)
+                content = response.text
+                
+                # Method 1: Check if redirected to a video (direct live)
+                if "/watch?v=" in final_url:
+                    video_id_match = re.search(r'watch\?v=([a-zA-Z0-9_-]+)', final_url)
+                    if video_id_match:
+                        video_id = video_id_match.group(1)
+                        is_live = await self._check_video_is_live(client, video_id)
+                        
+                        if is_live:
+                            return await self._extract_video_info(content, video_id)
+                
+                # Method 2: Check videos on the live page for any with live badge
+                video_ids = list(set(re.findall(r'"videoId":"([a-zA-Z0-9_-]{11})"', content)))
+                
+                for video_id in video_ids[:5]:  # Check first 5 videos
+                    is_live = await self._check_video_is_live(client, video_id)
+                    if is_live:
+                        # Fetch video page for details
+                        video_response = await client.get(
+                            f"https://www.youtube.com/watch?v={video_id}", 
+                            headers=self.headers
+                        )
+                        return await self._extract_video_info(video_response.text, video_id)
+                
+                return None
+                
+            except Exception as e:
+                print(f"Scrape error for handle {handle}: {str(e)}")
+                return None
+    
+    async def _scrape_live_by_channel_id(self, channel_id: str) -> Optional[dict]:
+        """
+        Scrape YouTube channel's /live page using channel ID.
+        """
+        live_url = f"https://www.youtube.com/channel/{channel_id}/live"
+        
+        async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
+            try:
+                response = await client.get(live_url, headers=self.headers)
+                final_url = str(response.url)
+                content = response.text
+                
+                if "/watch?v=" in final_url:
+                    video_id_match = re.search(r'watch\?v=([a-zA-Z0-9_-]+)', final_url)
+                    if video_id_match:
+                        video_id = video_id_match.group(1)
+                        is_live = await self._check_video_is_live(client, video_id)
+                        
+                        if is_live:
+                            return await self._extract_video_info(content, video_id)
+                
+                return None
+                
+            except Exception as e:
+                print(f"Scrape error for channel {channel_id}: {str(e)}")
+                return None
+    
+    async def _extract_video_info(self, content: str, video_id: str) -> dict:
+        """Extract title and thumbnail from video page content."""
+        # Extract title
+        title = None
+        title_patterns = [
+            r'"title":\{"runs":\[\{"text":"([^"]+)"',
+            r'"title":"([^"]+)"',
+            r'<title>([^<]+)</title>'
+        ]
+        for pattern in title_patterns:
+            match = re.search(pattern, content)
+            if match:
+                title = match.group(1)
+                if " - YouTube" in title:
+                    title = title.replace(" - YouTube", "")
+                break
+        
+        # Extract thumbnail
+        thumbnail = None
+        thumb_patterns = [
+            r'"thumbnail":\{"thumbnails":\[.*?"url":"(https://i\.ytimg\.com/[^"]+)"',
+            r'"thumbnails":\[\{"url":"(https://[^"]+)"'
+        ]
+        for pattern in thumb_patterns:
+            match = re.search(pattern, content)
+            if match:
+                thumbnail = match.group(1)
+                break
+        
+        # Fallback thumbnail
+        if not thumbnail and video_id:
+            thumbnail = f"https://i.ytimg.com/vi/{video_id}/hqdefault.jpg"
+        
+        return {
+            "live": True,
+            "videoId": video_id,
+            "title": title,
+            "thumbnail": thumbnail
+        }
+    
+    async def _api_search_live(self, channel_id: str) -> Optional[dict]:
+        """
+        Search for live streams using YouTube Data API.
+        This method consumes API quota.
+        """
+        if not self.api_key:
+            return None
+        
         params = {
             "part": "snippet",
             "channelId": channel_id,
             "type": "video",
             "eventType": "live",
-            "maxResults": 1
+            "maxResults": 1,
+            "key": self.api_key
         }
         
-        try:
-            data = await self._make_request("search", params)
-            if data and data.get("items"):
-                return data["items"][0]
-        except Exception:
-            pass
-        
-        # Method 2: Fallback - Check recent videos for liveBroadcastContent = "live"
-        # This catches streams that eventType=live misses
-        try:
-            fallback_params = {
-                "part": "snippet",
-                "channelId": channel_id,
-                "type": "video",
-                "order": "date",
-                "maxResults": 5  # Check last 5 videos
-            }
-            
-            data = await self._make_request("search", fallback_params)
-            if data and data.get("items"):
-                for item in data["items"]:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            try:
+                url = f"{self.BASE_URL}/search"
+                response = await client.get(url, params=params)
+                
+                if response.status_code == 403:
+                    # Quota exceeded - don't use API
+                    return None
+                
+                response.raise_for_status()
+                data = response.json()
+                
+                if data and data.get("items"):
+                    item = data["items"][0]
                     snippet = item.get("snippet", {})
-                    # Check if this video is currently live
-                    if snippet.get("liveBroadcastContent") == "live":
-                        return item
-        except Exception:
-            pass
-        
-        return None
+                    thumbnails = snippet.get("thumbnails", {})
+                    
+                    return {
+                        "live": True,
+                        "videoId": item["id"]["videoId"],
+                        "title": snippet.get("title"),
+                        "thumbnail": (
+                            thumbnails.get("high", {}).get("url") or
+                            thumbnails.get("medium", {}).get("url") or
+                            thumbnails.get("default", {}).get("url")
+                        )
+                    }
+                return None
+                
+            except Exception as e:
+                print(f"API search error for channel {channel_id}: {str(e)}")
+                return None
     
-    async def get_video_details(self, video_id: str) -> Optional[dict]:
-        """Get detailed information about a video."""
-        params = {
-            "part": "snippet,liveStreamingDetails",
-            "id": video_id
-        }
-        
-        try:
-            data = await self._make_request("videos", params)
-            if data and data.get("items"):
-                return data["items"][0]
-            return None
-        except Exception:
-            return None
-    
-    async def check_channel_live_status(self, channel_name: str, channel_id: str) -> dict:
+    async def check_channel_live_status(
+        self, 
+        channel_name: str, 
+        channel_id: str, 
+        handle: str = None
+    ) -> dict:
         """
         Check if a channel is currently live streaming.
-        Returns a structured response with live stream info.
+        Uses web scraping first (no quota), falls back to API if needed.
         """
         # Check cache first
         cache_key = f"live_{channel_id}"
@@ -127,31 +235,27 @@ class YouTubeService:
             "updatedAt": now.isoformat()
         }
         
-        try:
-            # Search for live streams
-            live_stream = await self.search_live_streams(channel_id)
-            
-            if live_stream:
-                video_id = live_stream["id"]["videoId"]
-                snippet = live_stream["snippet"]
-                
-                # Get high quality thumbnail
-                thumbnails = snippet.get("thumbnails", {})
-                thumbnail = (
-                    thumbnails.get("high", {}).get("url") or
-                    thumbnails.get("medium", {}).get("url") or
-                    thumbnails.get("default", {}).get("url")
-                )
-                
-                result.update({
-                    "live": True,
-                    "videoId": video_id,
-                    "title": snippet.get("title"),
-                    "thumbnail": thumbnail
-                })
-        except Exception as e:
-            # Log error but don't fail - just return not live
-            print(f"Error checking live status for {channel_name}: {str(e)}")
+        # Method 1: Try scraping with @handle (most reliable)
+        if handle:
+            scrape_result = await self._scrape_live_by_handle(handle)
+            if scrape_result and scrape_result.get("live"):
+                result.update(scrape_result)
+                _cache[cache_key] = result
+                _cache_expiry[cache_key] = now + timedelta(seconds=CACHE_TTL_SECONDS)
+                return result
+        
+        # Method 2: Try scraping with channel ID
+        scrape_result = await self._scrape_live_by_channel_id(channel_id)
+        if scrape_result and scrape_result.get("live"):
+            result.update(scrape_result)
+            _cache[cache_key] = result
+            _cache_expiry[cache_key] = now + timedelta(seconds=CACHE_TTL_SECONDS)
+            return result
+        
+        # Method 3: Fallback to API (if quota available)
+        api_result = await self._api_search_live(channel_id)
+        if api_result and api_result.get("live"):
+            result.update(api_result)
         
         # Cache the result
         _cache[cache_key] = result
@@ -177,7 +281,8 @@ class YouTubeService:
         tasks = [
             self.check_channel_live_status(
                 channel.get("name", "Unknown"),
-                channel.get("channelId")
+                channel.get("channelId"),
+                channel.get("handle")  # Pass the handle if available
             )
             for channel in channels
             if channel.get("channelId")
