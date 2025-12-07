@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional, Any
 from app.crud.base import CRUDBase
 from app.models.favorite import Favorite
 from app.schemas.favorite import FavoriteCreate, FavoriteBase
@@ -34,4 +34,35 @@ class CRUDFavorite(CRUDBase[Favorite, FavoriteCreate, FavoriteBase]):
                 created_doc['article_id'] = str(created_doc['article_id'])
         return Favorite(**created_doc)
 
+    async def get(self, db, *, id: Any) -> Optional[Favorite]:
+        """Override get to properly convert user_id to string"""
+        collection = db[self.collection_name]
+        doc = await collection.find_one({"_id": ObjectId(id)})
+        if doc:
+            if '_id' in doc:
+                doc['_id'] = str(doc['_id'])
+            if 'user_id' in doc and doc['user_id']:
+                doc['user_id'] = str(doc['user_id'])
+            if 'article_id' in doc and doc['article_id']:
+                doc['article_id'] = str(doc['article_id'])
+            return Favorite(**doc)
+        return None
+
+    async def remove(self, db, *, id: Any) -> Optional[Favorite]:
+        """Override remove to properly convert user_id to string"""
+        collection = db[self.collection_name]
+        doc = await collection.find_one({"_id": ObjectId(id)})
+        if doc:
+            await collection.delete_one({"_id": ObjectId(id)})
+            # Convert ObjectId to string for proper serialization
+            if '_id' in doc:
+                doc['_id'] = str(doc['_id'])
+            if 'user_id' in doc and doc['user_id']:
+                doc['user_id'] = str(doc['user_id'])
+            if 'article_id' in doc and doc['article_id']:
+                doc['article_id'] = str(doc['article_id'])
+            return Favorite(**doc)
+        return None
+
 favorite = CRUDFavorite(Favorite, "favorites")
+

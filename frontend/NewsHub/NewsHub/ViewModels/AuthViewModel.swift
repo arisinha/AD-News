@@ -22,6 +22,11 @@ class AuthViewModel: ObservableObject {
         }
     }
     
+    /// Returns true if user is not authenticated (guest mode)
+    var isGuest: Bool {
+        return !isAuthenticated
+    }
+    
     func login(username: String, password: String) async {
         isLoading = true
         errorMessage = nil

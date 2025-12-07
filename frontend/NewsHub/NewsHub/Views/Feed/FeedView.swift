@@ -2,42 +2,26 @@ import SwiftUI
 
 struct FeedView: View {
     @StateObject private var viewModel = FeedViewModel()
-    @State private var selectedFilter: FeedFilter = .trending
-    
-    enum FeedFilter: String, CaseIterable {
-        case trending = "Tendencias"
-        case categories = "Categorías"
-    }
+    @EnvironmentObject private var themeManager: ThemeManager
     
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                // Filter Picker
-                Picker("Feed Type", selection: $selectedFilter) {
-                    ForEach(FeedFilter.allCases, id: \.self) { filter in
-                        Text(filter.rawValue).tag(filter)
-                    }
-                }
-                .pickerStyle(.segmented)
-                .padding()
-                
-                // Category chips (only show when Categories tab is selected)
-                if selectedFilter == .categories {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 10) {
-                            ForEach(viewModel.categories, id: \.self) { category in
-                                CategoryChipView(
-                                    title: category,
-                                    isSelected: viewModel.selectedCategory == category
-                                ) {
-                                    viewModel.selectCategory(category)
-                                }
+                // Category carousel - always visible
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 10) {
+                        ForEach(viewModel.categories, id: \.self) { category in
+                            CategoryChipView(
+                                title: category,
+                                isSelected: viewModel.selectedCategory == category
+                            ) {
+                                viewModel.selectCategory(category)
                             }
                         }
-                        .padding(.horizontal)
                     }
-                    .padding(.bottom, 8)
+                    .padding(.horizontal)
                 }
+                .padding(.vertical, 12)
                 
                 // Articles List
                 if viewModel.isLoading && viewModel.articles.isEmpty {
@@ -55,7 +39,7 @@ struct FeedView: View {
                             .foregroundColor(.secondary)
                         Button("Reintentar") {
                             Task {
-                                await loadCurrentFeed()
+                                await viewModel.loadFeed(filter: .category(viewModel.selectedCategory))
                             }
                         }
                         .buttonStyle(.bordered)
@@ -85,35 +69,30 @@ struct FeedView: View {
                         .padding()
                     }
                     .refreshable {
-                        await loadCurrentFeed()
+                        await viewModel.loadFeed(filter: .category(viewModel.selectedCategory))
                     }
                 }
             }
             .navigationTitle("AD News")
             .navigationBarTitleDisplayMode(.large)
-        }
-        .task {
-            await viewModel.loadFeed(filter: .trending)
-        }
-        .onChange(of: selectedFilter) { _, newValue in
-            Task {
-                if newValue == .trending {
-                    await viewModel.loadFeed(filter: .trending)
-                } else {
-                    await viewModel.loadFeed(filter: .category(viewModel.selectedCategory))
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button {
+                        themeManager.cycleTheme()
+                    } label: {
+                        Image(systemName: themeManager.currentTheme.icon)
+                            .font(.system(size: 18))
+                            .foregroundColor(.primary)
+                    }
                 }
             }
         }
-    }
-    
-    private func loadCurrentFeed() async {
-        if selectedFilter == .trending {
-            await viewModel.loadFeed(filter: .trending)
-        } else {
+        .task {
             await viewModel.loadFeed(filter: .category(viewModel.selectedCategory))
         }
     }
 }
+
 
 // Category chip component
 struct CategoryChipView: View {

@@ -1,14 +1,49 @@
 import SwiftUI
 
 struct FavoritesView: View {
+    @EnvironmentObject private var authViewModel: AuthViewModel
+    @EnvironmentObject private var tabManager: TabManager
     @State private var favorites: [Article] = []
     @State private var isLoading = false
     @State private var errorMessage: String?
+    @State private var showLoginSheet = false
     
     var body: some View {
         NavigationStack {
             VStack {
-                if isLoading {
+                // Check if user is guest
+                if authViewModel.isGuest {
+                    // Guest mode - show login prompt
+                    VStack(spacing: 20) {
+                        Image(systemName: "person.crop.circle.badge.questionmark")
+                            .font(.system(size: 60))
+                            .foregroundColor(.blue)
+                        
+                        Text("Inicia sesión para guardar artículos")
+                            .font(.headline)
+                            .foregroundColor(.primary)
+                        
+                        Text("Crea una cuenta o inicia sesión para guardar tus artículos favoritos y acceder a ellos desde cualquier dispositivo.")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal)
+                        
+                        Button {
+                            showLoginSheet = true
+                        } label: {
+                            Text("Iniciar Sesión")
+                                .font(.headline)
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 40)
+                                .padding(.vertical, 14)
+                                .background(Color.blue)
+                                .cornerRadius(12)
+                        }
+                        .padding(.top, 8)
+                    }
+                    .padding()
+                } else if isLoading {
                     ProgressView()
                         .padding()
                 } else if let error = errorMessage {
@@ -58,7 +93,35 @@ struct FavoritesView: View {
             }
             .navigationTitle("Guardados")
             .task {
-                await loadFavorites()
+                if authViewModel.isAuthenticated {
+                    await loadFavorites()
+                }
+            }
+            .onChange(of: authViewModel.isAuthenticated) { _, isAuthenticated in
+                if isAuthenticated {
+                    // Close sheet and go to home if sheet was open
+                    if showLoginSheet {
+                        showLoginSheet = false
+                        tabManager.goToHome()
+                    } else {
+                        Task {
+                            await loadFavorites()
+                        }
+                    }
+                }
+            }
+            .sheet(isPresented: $showLoginSheet) {
+                NavigationStack {
+                    LoginView()
+                        .navigationBarTitleDisplayMode(.inline)
+                        .toolbar {
+                            ToolbarItem(placement: .navigationBarLeading) {
+                                Button("Cancelar") {
+                                    showLoginSheet = false
+                                }
+                            }
+                        }
+                }
             }
         }
     }
@@ -77,4 +140,3 @@ struct FavoritesView: View {
         isLoading = false
     }
 }
-

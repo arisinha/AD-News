@@ -2,10 +2,10 @@ import SwiftUI
 import Combine
 
 struct MainTabView: View {
-    @State private var selectedTab = 0
+    @EnvironmentObject private var tabManager: TabManager
     
     var body: some View {
-        TabView(selection: $selectedTab) {
+        TabView(selection: $tabManager.selectedTab) {
             FeedView()
                 .tabItem {
                     Label("Inicio", systemImage: "house.fill")
@@ -38,4 +38,3 @@ struct MainTabView: View {
         }
     }
 }
-

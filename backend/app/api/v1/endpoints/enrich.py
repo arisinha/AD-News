@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from app.crud.article import article as article_crud
 from app.db.mongodb import get_database
 from app.services.summary_service import summary_service
+from bson import ObjectId
 
 router = APIRouter()
 
@@ -25,7 +26,7 @@ async def enrich_article(
     # Update the article
     collection = db["articles"]
     await collection.update_one(
-        {"_id": article.id},
+        {"_id": ObjectId(article.id)},
         {"$set": {
             "ai_summary": enrichment["summary"],
             "key_points": enrichment["key_points"],
@@ -61,7 +62,7 @@ async def enrich_all_articles(
             # Update the article
             collection = db["articles"]
             await collection.update_one(
-                {"_id": article.id},
+                {"_id": ObjectId(article.id)},
                 {"$set": {
                     "ai_summary": enrichment["summary"],
                     "key_points": enrichment["key_points"],

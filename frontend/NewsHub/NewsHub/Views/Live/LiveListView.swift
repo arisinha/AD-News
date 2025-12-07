@@ -144,11 +144,24 @@ struct LiveListView: View {
                     }
                 }
             }
-            .navigationTitle("En Vivo")
-            .navigationBarTitleDisplayMode(.large)
-            .toolbarBackground(.visible, for: .navigationBar)
-            .toolbarBackground(Color(red: 0.1, green: 0.1, blue: 0.15), for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
+            .safeAreaInset(edge: .top) {
+                // Fixed header that always shows
+                VStack(alignment: .leading, spacing: 0) {
+                    Text("En Vivo")
+                        .font(.largeTitle)
+                        .fontWeight(.bold)
+                        .foregroundColor(.white)
+                        .padding(.horizontal)
+                        .padding(.top, 8)
+                        .padding(.bottom, 12)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(
+                    Color(red: 0.1, green: 0.1, blue: 0.15)
+                        .ignoresSafeArea(edges: .top)
+                )
+            }
+            .navigationBarHidden(true)
         }
         .task {
             await viewModel.loadLiveStreams()

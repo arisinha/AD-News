@@ -1,9 +1,10 @@
 from typing import Any
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from app.crud.article import article as article_crud
 from app.schemas.article import ArticleCreate
 from app.db.mongodb import get_database
 from datetime import datetime, timedelta
+from bson import ObjectId
 
 router = APIRouter()
 
@@ -165,3 +166,192 @@ async def seed_channels(
         "total": result["total"]
     }
 
+
+@router.post("/newsapi")
+async def seed_from_newsapi(
+    country: str = "mx",
+    category: str = None,
+    all_categories: bool = False,
+    page_size: int = 20,
+    db=Depends(get_database),
+) -> Any:
+    """
+    Fetch real news from NewsAPI and store in database.
+    
+    Args:
+        country: 2-letter country code (default: 'mx' for Mexico)
+        category: Optional category filter (business, entertainment, general, health, science, sports, technology)
+        all_categories: If True, fetch from all categories (overrides category param)
+        page_size: Number of articles per request (max 100)
+    
+    Returns:
+        Summary of inserted and skipped articles
+    """
+    from app.services.news_aggregation import news_service
+    
+    try:
+        # Fetch articles from NewsAPI
+        if all_categories:
+            articles = await news_service.fetch_all_categories(
+                country=country,
+                articles_per_category=page_size
+            )
+        else:
+            articles = await news_service.fetch_top_headlines(
+                country=country,
+                category=category,
+                page_size=page_size
+            )
+        
+        if not articles:
+            return {
+                "message": "No articles fetched from NewsAPI",
+                "inserted": 0,
+                "skipped": 0,
+                "total_fetched": 0
+            }
+        
+        # Get existing URLs to avoid duplicates
+        existing_urls = set()
+        cursor = db["articles"].find({}, {"url": 1})
+        async for doc in cursor:
+            existing_urls.add(doc.get("url"))
+        
+        # Insert new articles
+        inserted_count = 0
+        skipped_count = 0
+        
+        for article_data in articles:
+            if article_data.url in existing_urls:
+                skipped_count += 1
+                continue
+            
+            # Create article in database
+            article = await article_crud.create(db, obj_in=article_data)
+            inserted_count += 1
+            existing_urls.add(article_data.url)  # Add to set to prevent duplicates within same batch
+        
+        return {
+            "message": f"Successfully fetched news from NewsAPI",
+            "inserted": inserted_count,
+            "skipped": skipped_count,
+            "total_fetched": len(articles)
+        }
+        
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch news: {str(e)}")
+
+
+@router.delete("/articles")
+async def clear_articles(
+    db=Depends(get_database),
+) -> Any:
+    """Clear all articles from the database"""
+    result = await db["articles"].delete_many({})
+    return {
+        "message": f"Deleted {result.deleted_count} articles",
+        "deleted_count": result.deleted_count
+    }
+
+
+@router.post("/spanish")
+async def seed_spanish_news(
+    articles_per_category: int = 15,
+    enrich: bool = True,
+    db=Depends(get_database),
+) -> Any:
+    """
+    Fetch Spanish language news for Mexican market and optionally enrich with AI summaries.
+    
+    Args:
+        articles_per_category: Number of articles per category (default: 15)
+        enrich: If True, generate AI summaries for new articles (default: True)
+    
+    Returns:
+        Summary of inserted, skipped, and enriched articles
+    """
+    from app.services.news_aggregation import news_service
+    from app.services.summary_service import summary_service
+    
+    try:
+        # Fetch Spanish language articles
+        articles = await news_service.fetch_spanish_news(
+            articles_per_category=articles_per_category,
+            region="mx"
+        )
+        
+        if not articles:
+            return {
+                "message": "No Spanish articles fetched from NewsAPI",
+                "inserted": 0,
+                "skipped": 0,
+                "enriched": 0,
+                "total_fetched": 0
+            }
+        
+        # Get existing URLs to avoid duplicates
+        existing_urls = set()
+        cursor = db["articles"].find({}, {"url": 1})
+        async for doc in cursor:
+            existing_urls.add(doc.get("url"))
+        
+        # Insert new articles
+        inserted_count = 0
+        skipped_count = 0
+        enriched_count = 0
+        inserted_ids = []
+        
+        for article_data in articles:
+            if article_data.url in existing_urls:
+                skipped_count += 1
+                continue
+            
+            # Create article in database
+            article = await article_crud.create(db, obj_in=article_data)
+            inserted_count += 1
+            inserted_ids.append(article.id)
+            existing_urls.add(article_data.url)
+        
+        # Enrich new articles with AI summaries
+        if enrich and inserted_ids:
+            collection = db["articles"]
+            for article_id in inserted_ids:
+                try:
+                    # Get the article
+                    article = await article_crud.get(db, id=str(article_id))
+                    if not article:
+                        continue
+                    
+                    # Generate enrichment data
+                    text = f"{article.title}. {article.description or ''}. {article.content or ''}"
+                    enrichment = await summary_service.enrich_article(text)
+                    
+                    # Update the article (convert string ID to ObjectId)
+                    await collection.update_one(
+                        {"_id": ObjectId(article_id)},
+                        {"$set": {
+                            "ai_summary": enrichment["summary"],
+                            "key_points": enrichment["key_points"],
+                            "sentiment_score": enrichment["sentiment_score"],
+                            "sentiment_label": enrichment["sentiment_label"]
+                        }}
+                    )
+                    enriched_count += 1
+                except Exception as e:
+                    print(f"Error enriching article {article_id}: {e}")
+                    continue
+        
+        return {
+            "message": f"Successfully fetched Spanish news for Mexican market",
+            "inserted": inserted_count,
+            "skipped": skipped_count,
+            "enriched": enriched_count,
+            "total_fetched": len(articles)
+        }
+        
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch Spanish news: {str(e)}")
