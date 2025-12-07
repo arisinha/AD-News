@@ -1,14 +1,15 @@
 import Foundation
 
-enum NetworkError: Error {
+enum NetworkError: LocalizedError {
     case invalidURL
     case invalidResponse
     case unauthorized
     case serverError(String)
     case decodingError
     case noData
+    case connectionError(String)
     
-    var localizedDescription: String {
+    var errorDescription: String? {
         switch self {
         case .invalidURL:
             return "URL inválida"
@@ -22,6 +23,8 @@ enum NetworkError: Error {
             return "Error al procesar la respuesta"
         case .noData:
             return "No se recibieron datos"
+        case .connectionError(let message):
+            return "Error de conexión: \(message)"
         }
     }
 }
@@ -46,6 +49,7 @@ class NetworkManager {
         var request = URLRequest(url: url)
         request.httpMethod = method
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.timeoutInterval = 30 // 30 second timeout for slower endpoints
         
         // Add auth token if required
         if requiresAuth, let token = UserDefaults.standard.string(forKey: "auth_token") {
@@ -57,7 +61,25 @@ class NetworkManager {
             request.httpBody = try JSONEncoder().encode(body)
         }
         
-        let (data, response) = try await URLSession.shared.data(for: request)
+        // Make the request with connection error handling
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await URLSession.shared.data(for: request)
+        } catch let urlError as URLError {
+            switch urlError.code {
+            case .timedOut:
+                throw NetworkError.connectionError("La solicitud tardó demasiado. Intenta de nuevo.")
+            case .notConnectedToInternet:
+                throw NetworkError.connectionError("No hay conexión a internet")
+            case .cannotConnectToHost, .cannotFindHost:
+                throw NetworkError.connectionError("No se pudo conectar al servidor")
+            default:
+                throw NetworkError.connectionError(urlError.localizedDescription)
+            }
+        } catch {
+            throw NetworkError.connectionError(error.localizedDescription)
+        }
         
         guard let httpResponse = response as? HTTPURLResponse else {
             throw NetworkError.invalidResponse
