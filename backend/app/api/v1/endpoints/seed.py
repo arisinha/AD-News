@@ -145,3 +145,23 @@ async def seed_articles(
         "message": f"Successfully seeded {len(created_articles)} articles",
         "count": len(created_articles)
     }
+
+
+@router.post("/channels")
+async def seed_channels(
+    db=Depends(get_database),
+) -> Any:
+    """Seed the database with YouTube news channels for live stream detection"""
+    
+    from data.seed_channels import seed_channels as run_seed
+    
+    result = await run_seed()
+    
+    return {
+        "message": f"Successfully seeded channels: {result['inserted']} inserted, {result['updated']} updated, {result.get('deleted', 0)} deleted",
+        "inserted": result["inserted"],
+        "updated": result["updated"],
+        "deleted": result.get("deleted", 0),
+        "total": result["total"]
+    }
+

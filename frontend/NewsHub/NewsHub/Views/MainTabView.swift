@@ -12,23 +12,30 @@ struct MainTabView: View {
                 }
                 .tag(0)
             
+            LiveListView()
+                .tabItem {
+                    Label("En Vivo", systemImage: "video.fill")
+                }
+                .tag(1)
+            
             SearchView()
                 .tabItem {
                     Label("Buscar", systemImage: "magnifyingglass")
                 }
-                .tag(1)
+                .tag(2)
             
             FavoritesView()
                 .tabItem {
                     Label("Guardados", systemImage: "bookmark.fill")
                 }
-                .tag(2)
+                .tag(3)
             
             ProfileView()
                 .tabItem {
                     Label("Perfil", systemImage: "person.fill")
                 }
-                .tag(3)
+                .tag(4)
         }
     }
 }
+

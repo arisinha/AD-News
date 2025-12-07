@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     
     NEWS_API_KEY: Optional[str] = None
     OPENAI_API_KEY: Optional[str] = None
+    YOUTUBE_API_KEY: Optional[str] = None
     
     SENTRY_DSN: Optional[str] = None
 
